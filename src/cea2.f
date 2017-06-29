@@ -1,3 +1,4 @@
+      SUBROUTINE RUN (prefix_in, out_file, thermo_file, trans_file)
 C***********************************************************************
 C                     P R O G R A M      C E A 2
 C
@@ -106,7 +107,7 @@ C***********************************************************************
 C LOCAL VARIABLES
       CHARACTER*15 ensert(20)
       CHARACTER*200 infile,ofile
-      CHARACTER*196 prefix
+      CHARACTER*196 prefix, prefix_in, out_file, thermo_file, trans_file
       LOGICAL caseok,ex,readok
       INTEGER i,inc,iof,j,ln,n
       INTEGER INDEX
@@ -114,23 +115,28 @@ C LOCAL VARIABLES
       REAL*8 DLOG
       SAVE caseok,ensert,ex,i,inc,infile,iof,j,ln,n,ofile,prefix,readok,
      &  xi,xln
-C
-      WRITE (*,99001)
-      READ (*,99002) prefix
+
+C       WRITE (*,99001)
+C       READ (*,99002) prefix
+      prefix = prefix_in
       ln = INDEX(prefix,' ') - 1
       infile = prefix(1:ln)//'.inp'
-      ofile = prefix(1:ln)//'.out'
+      ofile = out_file
       Pfile = prefix(1:ln)//'.plt'
       INQUIRE (FILE=infile,EXIST=ex)
       IF ( .NOT.ex ) THEN
         PRINT *,infile,' DOES NOT EXIST'
         GOTO 400
       ENDIF
+      ln = INDEX(thermo_file,' ') - 1
+      thermo_file = thermo_file(1:ln)
+      ln = INDEX(trans_file,' ') - 1
+      trans_file = trans_file(1:ln)
       OPEN (IOINP,FILE=infile,STATUS='old',FORM='formatted')
       OPEN (IOOUT,FILE=ofile,STATUS='unknown',FORM='formatted')
       OPEN (IOSCH,STATUS='scratch',FORM='unformatted')
-      OPEN (IOTHM,FILE='thermo.lib',FORM='unformatted')
-      OPEN (IOTRN,FILE='trans.lib',FORM='unformatted')
+      OPEN (IOTHM,FILE=thermo_file,FORM='unformatted')
+      OPEN (IOTRN,FILE=trans_file,FORM='unformatted')
       WRITE (IOOUT,99006)
       WRITE (IOOUT,99007)
       WRITE (IOOUT,99006)
@@ -192,7 +198,7 @@ C INITIAL ESTIMATES
               IF ( Prod(j).EQ.ensert(i) ) THEN
                 Npr = Npr + 1
                 Jcond(Npr) = j
-                IF ( .NOT.Short ) WRITE (IOOUT,99003) Prod(j)
+                IF ( .NOT.Short_bn ) WRITE (IOOUT,99003) Prod(j)
                 GOTO 120
               ENDIF
             ENDDO
@@ -224,6 +230,7 @@ C INITIAL ESTIMATES
       CLOSE (IOTHM)
       CLOSE (IOTRN)
       CLOSE (IOPLT)
+      RETURN
  400  STOP
 99001 FORMAT (//' ENTER INPUT FILE NAME WITHOUT .inp EXTENSION.'/ 
      &        '   THE OUTPUT FILES FOR LISTING AND PLOTTING WILL HAVE',/
@@ -704,7 +711,13 @@ C
           ne(i) = 0.
         ENDIF
       ENDDO
-      WRITE (IOOUT,frmt) Aa,(w(j),ne(j),j=j1,Npt)
+c      WRITE (IOOUT,frmt) Aa,(w(j),ne(j),j=j1,Npt)
+      if (ne(1) .gt. -15) then
+        w(1)=w(1)*10.**ne(1)
+        WRITE (IOOUT,*) Aa
+        WRITE (IOOUT,100) w(1)
+      endif
+  100 format(1p1E17.10)
       END
       SUBROUTINE EQLBRM
 C***********************************************************************
@@ -741,13 +754,13 @@ C
       ncvg = 0
       lncvg = 3*Nlm
       reduce = .FALSE.
-      siz9 = Size - 9.2103404D0
-      tsize = Size
-      xsize = Size + 6.90775528D0
+      siz9 = Size_bn - 9.2103404D0
+      tsize = Size_bn
+      xsize = Size_bn + 6.90775528D0
       IF ( Trace.NE.0. ) THEN
         maxitn = maxitn + Ngc/2
-        xsize = -DLOG(Trace)
-        IF ( xsize.LT.Size ) xsize = Size + .1
+        xsize = -DLOG(Trace*1.E-10)
+        IF ( xsize.LT.Size_bn ) xsize = Size_bn + .1
       ENDIF
       IF ( xsize.GT.80. ) xsize = 80.D0
       esize = MIN(80.D0,xsize+6.90775528D0)
@@ -778,7 +791,7 @@ C
             Jcond(k) = j + kg
             En(j+kg,Npt) = En(j,Npt)
             En(j,Npt) = 0.
-            IF ( Prod(j).NE.Prod(j+kg).AND..NOT.Short ) 
+            IF ( Prod(j).NE.Prod(j+kg).AND..NOT.Short_bn ) 
      &           WRITE (IOOUT,99023) Prod(j),Prod(j+kg)
           ENDIF
           GOTO 300
@@ -821,8 +834,8 @@ C
       lelim = 0
       lz = ls
       IF ( Ions ) lz = ls - 1
-      IF ( Npt.EQ.1.AND..NOT.Shock.AND..NOT.Short ) WRITE (IOOUT,99001)
-     &     (Elmt(i),i=1,Nlm)
+      IF ( Npt.EQ.1.AND..NOT.Shock.AND..NOT.Short_bn ) WRITE 
+     &     (IOOUT,99001) (Elmt(i),i=1,Nlm)
       IF ( Debug(Npt) ) THEN
         DO i = 1,Nlm
           cmp(i) = Elmt(i)
@@ -904,7 +917,7 @@ C CALCULATE CONTROL FACTOR,AMBDA
           sum = sum*5.
           DO j = 1,Ng
             IF ( Deln(j).GT.0. ) THEN
-              IF ( (Enln(j)-Ennl+Size).LE.0. ) THEN
+              IF ( (Enln(j)-Ennl+Size_bn).LE.0. ) THEN
                 sum1 = DABS(Deln(j)-X(Iq1))
                 IF ( sum1.GE.siz9 ) THEN
                   sum1 = DABS(-9.2103404D0-Enln(j)+Ennl)/sum1
@@ -1260,7 +1273,7 @@ C ERROR, SET TT=0
           DO il = 1,le
             xx(il) = X(il)
           ENDDO
-          IF ( .NOT.Short ) THEN
+          IF ( .NOT.Short_bn ) THEN
             IF ( newcom ) WRITE (IOOUT,99021) (cmp(k),k=1,le)
             WRITE (IOOUT,99022) Npt,numb,Tt,(xx(il),il=1,le)
           ENDIF
@@ -1378,8 +1391,8 @@ C WRONG PHASE INCLUDED FOR T INTERVAL, SWITCH EN
           Jcond(ipr) = jkg
           En(j,Npt) = 0.
           jsw = j
-          IF ( Prod(j).NE.Prod(jkg).AND..NOT.Short ) WRITE (IOOUT,99023)
-     &         Prod(j),Prod(jkg)
+          IF ( Prod(j).NE.Prod(jkg).AND..NOT.Short_bn ) WRITE 
+     &         (IOOUT,99023) Prod(j),Prod(jkg)
           j = jkg
           GOTO 900
         ENDIF
@@ -1411,7 +1424,7 @@ C ADD CONDENSED SPECIES
         i = i - 1
       ENDDO
       Jcond(1) = j
-      IF ( .NOT.Short ) WRITE (IOOUT,99027) Prod(j)
+      IF ( .NOT.Short_bn ) WRITE (IOOUT,99027) Prod(j)
  900  inc = j - Ng
       Convg = .FALSE.
       IF ( Tp ) cpcalc = .FALSE.
@@ -1424,7 +1437,7 @@ C REMOVE CONDENSED SPECIES
       DO i = k,Npr
         Jcond(i) = Jcond(i+1)
       ENDDO
-      IF ( .NOT.Short ) WRITE (IOOUT,99028) Prod(j)
+      IF ( .NOT.Short_bn ) WRITE (IOOUT,99028) Prod(j)
       Npr = Npr - 1
       DO i = 1,Nlm
         IF ( cmp(i).EQ.Prod(j) ) THEN
@@ -2020,11 +2033,11 @@ C READ CHARACTERS, ONE AT A TIME
 C FIND FIRST AND LAST NON-BLANK CHARACTER
       DO i = 132,1, - 1
         nch1 = i
-        IF ( ch1(i).NE.' '.AND.ch1(i).NE.'	' ) GOTO 200
+        IF ( ch1(i).NE.' '.AND.ch1(i).NE.'  ' ) GOTO 200
       ENDDO
  200  DO i = 1,nch1
         ich1 = i
-        IF ( ch1(i).NE.' '.AND.ch1(i).NE.'	' ) GOTO 300
+        IF ( ch1(i).NE.' '.AND.ch1(i).NE.'  ' ) GOTO 300
       ENDDO
  300  IF ( nch1.EQ.1.OR.ch1(ich1).EQ.'#'.OR.ch1(ich1).EQ.'!' ) THEN
         WRITE (IOOUT,99002) (ch1(i),i=1,nch1)
@@ -2060,7 +2073,7 @@ C KEYWORD READ FOR NEXT DATASET. END PROCESSING
 C LOOK FOR DELIMITER STRINGS
         IF ( cx.EQ.','.AND.(Lcin(Ncin).GT.0.OR.nx.EQ.0) ) cx = ' '
         IF ( cx.EQ.'='.AND.(Lcin(Ncin).LT.0.OR.nx.EQ.0) ) cx = ' '
-        IF ( cx.NE.' '.AND.cx.NE.'	' ) THEN
+        IF ( cx.NE.' '.AND.cx.NE.'  ' ) THEN
 C LOOK FOR CHARACTER STRINGS
           nx = nx + 1
           IF ( Ncin.GT.1 ) THEN
@@ -2149,7 +2162,7 @@ C
       Nsert = 0
       reacts = .FALSE.
       Trace = 0
-      Short = .FALSE.
+      Short_bn = .FALSE.
       Massf = .FALSE.
       DO i = 1,NCOL
         Debug(i) = .FALSE.
@@ -2212,8 +2225,8 @@ C PROCESS 'OUTP' DATASET.
                 Trnspt = .TRUE.
               ELSEIF ( cx4.EQ.'trac' ) THEN
                 Trace = dpin(i+1)
-              ELSEIF ( cin(i)(:5).EQ.'short' ) THEN
-                Short = .TRUE.
+              ELSEIF ( cin(i)(:5).EQ.'Short_bn' ) THEN
+                Short_bn = .TRUE.
               ELSEIF ( cin(i)(:5).EQ.'massf' ) THEN
                 Massf = .TRUE.
               ELSEIF ( cx3.EQ.'deb'.OR.cx3.EQ.'dbg' ) THEN
@@ -2357,7 +2370,7 @@ C CHECK FOR CHEMICAL SYMBOLS IN EXPLODED FORMULA
           ENDIF
 C SORT AND STORE INPUT FROM 'PROB' DATASET
         ELSEIF ( code.EQ.'prob' ) THEN
-          Case = ' '
+          Case_bn = ' '
           DO i = 1,MAXPV
             P(i) = 0.
             V(i) = 0.
@@ -2424,7 +2437,7 @@ C ASSOCIATED NUMERICAL DATA.
               cx3 = cx15(:3)
               cx4 = cx15(:4)
               IF ( cx4.EQ.'case' ) THEN
-                Case = cin(i+1)
+                Case_bn = cin(i+1)
                 lcin(i+1) = 0
               ELSEIF ( cx2.EQ.'tp'.OR.cx2.EQ.'pt' ) THEN
                 Tp = .TRUE.
@@ -2491,13 +2504,13 @@ C ASSOCIATED NUMERICAL DATA.
             IF ( refl.AND.Eql ) Refleq = .TRUE.
           ENDIF
           Hsub0 = DMIN1(hr,ur)
-          Size = 0.
+          Size_bn = 0.
           IF ( hr.GT..9D30 ) hr = 0.D0
           IF ( ur.GT..9D30 ) ur = 0.D0
           IF ( Trnspt ) Viscns = .3125*DSQRT(1.E5*Boltz/(Pi*Avgdr))
           IF ( Siunit ) R = Rr/1000.
           IF ( Detn.OR.Shock ) Newr = .TRUE.
-          IF ( .NOT.Short ) THEN
+          IF ( .NOT.Short_bn ) THEN
             WRITE (IOOUT,99008) Tp,(Hp.AND..NOT.Vol),Sp,(Tp.AND.Vol),
      &                      (Hp.AND.Vol),(Sp.AND.Vol),Detn,Shock,refl,
      &                      incd,Rkt,Froz,Eql,Ions,Siunit,Debugf,Shkdbg,
@@ -2509,7 +2522,7 @@ C ASSOCIATED NUMERICAL DATA.
           ENDIF
           IF ( Rkt ) THEN
             IF ( Nt.EQ.0 ) Hp = .TRUE.
-            IF ( .NOT.Short ) THEN
+            IF ( .NOT.Short_bn ) THEN
               WRITE (IOOUT,99012) (P(jj),jj=1,Np)
               WRITE (IOOUT,99013) (Pcp(jj),jj=1,Npp)
               WRITE (IOOUT,99014) (Subar(i),i=1,Nsub)
@@ -2517,7 +2530,7 @@ C ASSOCIATED NUMERICAL DATA.
               WRITE (IOOUT,99016) Nfz,Ma,Acat
             ENDIF
           ELSE
-            IF ( .NOT.Vol.AND..NOT.Short ) WRITE (IOOUT,99017)
+            IF ( .NOT.Vol.AND..NOT.Short_bn ) WRITE (IOOUT,99017)
      &           (P(jj),jj=1,Np)
           ENDIF
           IF ( reacts ) CALL REACT
@@ -2722,7 +2735,7 @@ C PROCESS NUMERICAL DATA FOLLOWING 'PROB' LITERALS
       ELSEIF ( cx4.EQ.'mdot'.OR.cx2.EQ.'ma' ) THEN
         Ma = mix(1)
       ELSEIF ( cx4.EQ.'case' ) THEN
-        Case = cin(in+1)
+        Case_bn = cin(in+1)
         lcin(in+1) = 0
       ELSEIF ( Nof.EQ.0.AND.
      &         (cx3.EQ.'phi'.OR.cx3.EQ.'o/f'.OR.cx3.EQ.'f/a'.OR.
@@ -2942,7 +2955,7 @@ C LOCAL VARIABLES
       REAL*8 DABS,DLOG
       SAVE assval,bigb,bratio,dbi,i,j,smalb,tem,v1,v2
 C
-      IF ( .NOT.Short ) WRITE (IOOUT,99001) Oxfl
+      IF ( .NOT.Short_bn ) WRITE (IOOUT,99001) Oxfl
       Eqrat = 0.
       tem = Oxfl + 1.
       v2 = (Oxfl*Vmin(1)+Vmin(2))/tem
@@ -2969,15 +2982,15 @@ C CALCUALTE MOLECULAR WEIGHT OF TOTAL REACTANT, WMIX.
       ENDIF
       Npt = 1
 C IF ASSIGNED U OR H NOT GIVEN IN PROB DATA, INITIAL HSUB0 = 1.D30
-      IF ( Size.EQ.0. ) assval = Hsub0
+      IF ( Size_bn.EQ.0. ) assval = Hsub0
       IF ( assval.GE.1.D30 ) Hsub0 = (Oxfl*Hpp(1)+Hpp(2))/tem
 C NOTE THAT "BRATIO" IS "BRATIO" IN SEC 3.2 IN RP-1311.
       bratio = smalb/bigb
-      Size = 18.420681D0
-      IF ( bratio.LT.1.D-5 ) Size = DLOG(1000.D0/bratio)
+      Size_bn = 18.420681D0
+      IF ( bratio.LT.1.D-5 ) Size_bn = DLOG(1000.D0/bratio)
       Jsol = 0
       Jliq = 0
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99002)
         IF ( Vol ) WRITE (IOOUT,99003)
         IF ( .NOT.Vol ) WRITE (IOOUT,99004)
@@ -2986,8 +2999,8 @@ C NOTE THAT "BRATIO" IS "BRATIO" IN SEC 3.2 IN RP-1311.
       ENDIF
       DO i = 1,Nlm
         j = Jcm(i)
-        IF ( .NOT.Short ) WRITE (IOOUT,99007) Prod(j),B0p(i,2),B0p(i,1),
-     &                           B0(i)
+        IF ( .NOT.Short_bn ) WRITE (IOOUT,99007) Prod(j),B0p(i,2),
+     &                           B0p(i,1),B0(i)
       ENDDO
       RETURN
 99001 FORMAT (/' O/F = ',F10.6)
@@ -3048,7 +3061,7 @@ C
       EQUIVALENCE (mxx(22),mdvp)
       EQUIVALENCE (mxx(23),mcondf)
       EQUIVALENCE (mxx(24),mpnf)
-      WRITE (IOOUT,99001) Case
+      WRITE (IOOUT,99001) Case_bn
       IF ( Moles ) THEN
         WRITE (IOOUT,99002) '   MOLES   '
         IF ( .NOT.Siunit ) WRITE (IOOUT,99003)
@@ -3330,7 +3343,7 @@ C MASS OR MOLE FRACTIONS
         ENDDO
       ENDIF
       WRITE (IOOUT,99012) Tg(4)
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99013) mamo,tra
         WRITE (IOOUT,99014) (Omit(i),i=1,notuse)
       ENDIF
@@ -3644,7 +3657,7 @@ C CALCULATE V+(KR), AND V-(KR)
             ENDIF
           ENDIF
         ENDDO
-        IF ( .NOT.Short ) THEN
+        IF ( .NOT.Short_bn ) THEN
           IF ( Moles ) THEN
             WRITE (IOOUT,99008) ' MOLES '
           ELSE
@@ -4081,7 +4094,7 @@ C INITIAL ESTIMATE FOR PC (AND ACAT IF NOT ASSIGNED)
         Ttt(2) = Ttt(4)
         Vlm(2) = Vlm(4)
         Wm(2) = Wm(4)
-        IF ( .NOT.Short ) WRITE (IOOUT,99009)
+        IF ( .NOT.Short_bn ) WRITE (IOOUT,99009)
         GOTO 600
 C INITIALIZE FOR THROAT
  400    IF ( ipp.GT.nipp ) THEN
@@ -4113,7 +4126,7 @@ C THROAT
                   Pp = Pp*EXP(dd)
                   App(nptth) = P(Ip)/Pp
                   IF ( Fac ) App(nptth) = pinf/Pp
-                  IF ( Eql.AND..NOT.Short ) WRITE (IOOUT,99013) 
+                  IF ( Eql.AND..NOT.Short_bn ) WRITE (IOOUT,99013) 
      &                            App(nptth)
                   thi = .TRUE.
                   GOTO 250
@@ -4156,14 +4169,14 @@ C THROAT
         thi = .FALSE.
         App(nptth) = ((Gammas(i12)+1.)/2.)
      &               **(Gammas(i12)/(Gammas(i12)-1.))
-        IF ( Eql.AND..NOT.Short ) WRITE (IOOUT,99013) App(nptth)
+        IF ( Eql.AND..NOT.Short_bn ) WRITE (IOOUT,99013) App(nptth)
         Pp = pinf/App(nptth)
         Isv = -i12
         GOTO 1200
  500    npr1 = Npr
         App(nptth) = P(Ip)/Pp
         IF ( Fac ) App(nptth) = pinf/Pp
-        IF ( Eql.AND..NOT.Short ) WRITE (IOOUT,99013) App(nptth)
+        IF ( Eql.AND..NOT.Short_bn ) WRITE (IOOUT,99013) App(nptth)
         itrot = itrot - 1
         GOTO 250
  550    Awt = Enn*Tt/(Pp*usq**.5)
@@ -4655,7 +4668,7 @@ C ARE ALL ELEMENTS IN PRODUCT SPECIES?
         GOTO 600
  300  CONTINUE
 C WRITE POSSIBLE PRODUCT LIST
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99003) Thdate
         DO i = 1,Ngc,3
           i5 = i + 2
@@ -4674,7 +4687,7 @@ C SEARCH FOR TRANSPORT PROPERTIES FOR THIS CHEMICAL SYSTEM
       Ntape = 0
       npure = 0
       lineb = 1
-      IF ( .NOT.Short ) WRITE (IOOUT,99006)
+      IF ( .NOT.Short_bn ) WRITE (IOOUT,99006)
       READ (IOTRN) nrec
       DO ir = 1,nrec
         READ (IOTRN) spece,trdata
@@ -4707,12 +4720,12 @@ C WRITE NAMES FOR PURE SPECIES.
  500    WRITE (IOSCH) jj,trdata
         Ntape = Ntape + 1
  550    IF ( npure.NE.0.AND.(npure.GE.6.OR.ir.GE.nrec) ) THEN
-          IF ( .NOT.Short ) WRITE (IOOUT,99007) (pure(jk),jk=1,npure)
+          IF ( .NOT.Short_bn ) WRITE (IOOUT,99007) (pure(jk),jk=1,npure)
           npure = 0
         ENDIF
       ENDDO
       lineb = lineb - 1
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99008)
         DO j = 1,lineb
           WRITE (IOOUT,99009) (bin(i,j),i=1,2)
@@ -4833,11 +4846,11 @@ C LOCAL VARIABLES
      &  mis,mu12rt,n,p1,p21,p21l,p2p1,pmn,refl,rho12,rho52,rrho,seql,sg,
      &  srefl,t1,t21,t21l,t2t1,ttmax,u1u2,uis,utwo,uu,wmx,ww
 C
-      IF ( Trace.EQ.0. ) Trace = 5.E-9
+      IF ( Trace.EQ.0. ) Trace = 5.E-19
       Tp = .TRUE.
       Cpmix = 0.
       srefl = .FALSE.
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99001)
         WRITE (IOOUT,99002) Incdeq,Refleq,Incdfz,Reflfz
       ENDIF
@@ -4853,7 +4866,7 @@ C
         WRITE (IOOUT,99003) NCOL
         Nsk = NCOL
       ENDIF
-      IF ( .NOT.Short ) THEN
+      IF ( .NOT.Short_bn ) THEN
         WRITE (IOOUT,99004) (U1(i),i=1,Nsk)
         WRITE (IOOUT,99005) (Mach1(i),i=1,Nsk)
       ENDIF
