@@ -1,4 +1,5 @@
-      SUBROUTINE RUN (prefix_in, out_file, thermo_file, trans_file)
+      SUBROUTINE RUN (prefix_in, out_file, thermo_file, trans_file, res,
+     &  spec)
 C***********************************************************************
 C                     P R O G R A M      C E A 2
 C
@@ -105,19 +106,22 @@ C***********************************************************************
       IMPLICIT NONE
       INCLUDE 'cea.inc'
 C LOCAL VARIABLES
-      CHARACTER*15 ensert(20)
+      CHARACTER*15 ensert(20), spec(50)
+Cf2py intent(out) spec
       CHARACTER*200 infile,ofile
       CHARACTER*196 prefix, prefix_in, out_file, thermo_file, trans_file
       LOGICAL caseok,ex,readok
       INTEGER i,inc,iof,j,ln,n
       INTEGER INDEX
-      REAL*8 xi,xln
+      REAL*8 xi,xln, res(50)
+Cf2py intent(out) res
       REAL*8 DLOG
       SAVE caseok,ensert,ex,i,inc,infile,iof,j,ln,n,ofile,prefix,readok,
      &  xi,xln
 
 C       WRITE (*,99001)
 C       READ (*,99002) prefix
+      Nres = 0
       prefix = prefix_in
       ln = INDEX(prefix,' ') - 1
       infile = prefix(1:ln)//'.inp'
@@ -209,6 +213,8 @@ C INITIAL ESTIMATES
           CALL ROCKET
         ELSEIF ( Tp.OR.Hp.OR.Sp ) THEN
           CALL THERMP
+          res(:) = result(:)
+          spec(:) = species(:)
         ELSEIF ( Detn ) THEN
           CALL DETON
         ELSEIF ( Shock ) THEN
@@ -716,6 +722,9 @@ c      WRITE (IOOUT,frmt) Aa,(w(j),ne(j),j=j1,Npt)
         w(1)=w(1)*10.**ne(1)
         WRITE (IOOUT,*) Aa
         WRITE (IOOUT,100) w(1)
+        Nres = Nres + 1
+        result(Nres) = w(1)
+        species(Nres) = Aa
       endif
   100 format(1p1E17.10)
       END

@@ -51,8 +51,8 @@ C
       COMMON /INPT  / Am,B0p,Cpmix,Hpp,Vmin,Vpls,Wmix,Wp,Atmwt,Bcheck,
      &                Oxf,P,Rh,T,V,Valnce
 C
-      INTEGER Imat,Iq1,Isv,Jliq,Jsol,Lsave,Msing
-      COMMON /MISCI / Imat,Iq1,Isv,Jliq,Jsol,Lsave,Msing
+      INTEGER Imat,Iq1,Isv,Jliq,Jsol,Lsave,Msing,Nres
+      COMMON /MISCI / Imat,Iq1,Isv,Jliq,Jsol,Lsave,Msing,Nres
 C
       LOGICAL Convg,Debug(NCOL),Detdbg,Detn,Eql,Gonly,Hp,Ions,Massf,
      &        Moles,Newr,Pderiv,Shock,Short_bn,Siunit,Sp,Tp,Trnspt,Vol
@@ -62,20 +62,20 @@ C
 C
       REAL*8 Avgdr,Boltz,Eqrat,Hsub0,Oxfl,Pi,Pp,R,Rr,Size_bn,S0,Tln,Tm,
      &       Trace,Tt,Viscns,Vv
-      REAL*8 Atwt(MAXEL),B0(MAXEL),X(MAXMAT)
+      REAL*8 Atwt(MAXEL),B0(MAXEL),X(MAXMAT),result(MAXMAT)
       REAL*8 A(MAXEL,MAXNGC),G(MAXMAT,MAXMAT+1)
       COMMON /MISCR / A,Atwt,Avgdr,Boltz,B0,Eqrat,G,Hsub0,Oxfl,Pi,Pp,R,
-     &                Rr,Size_bn,S0,Tln,Tm,Trace,Tt,Viscns,Vv,X
+     &                Rr,Size_bn,S0,Tln,Tm,Trace,Tt,Viscns,Vv,X,result
 C
       CHARACTER*2 Elmt(MAXEL),Ratom(MAXR,12),Symbol(100)
       CHARACTER*4 Fmt(30)
       CHARACTER*8 Fox(MAXR)
       CHARACTER*10 Thdate
       CHARACTER*15 Case_bn,Energy(MAXR),Omit(0:MAXNGC),Pltvar(20),
-     &             Prod(0:MAXNGC),Rname(MAXR)
+     &             Prod(0:MAXNGC),Rname(MAXR),species(MAXMAT)
       CHARACTER*200 Pfile
       COMMON /CDATA / Case_bn,Elmt,Energy,Fmt,Fox,Omit,Pltvar,Prod,
-     &                Ratom,Rname,Symbol,Thdate,Pfile
+     &                Ratom,Rname,Symbol,Thdate,Pfile,species
 C
       REAL*8 Cpr(NCOL),Dlvpt(NCOL),Dlvtp(NCOL),Gammas(NCOL),Hsum(NCOL),
      &       Ppp(NCOL),Ssum(NCOL),Totn(NCOL),Ttt(NCOL),Vlm(NCOL),
